@@ -1,4 +1,3 @@
-linaro-trusted-firmware
-=======================
-
-Repository for Arm trusted firmware and Open TEE
+This repository is used to store summamy for ATF + OP-TEE.
+Currently it include:
+> verified uboot on Arm trusted firmware
