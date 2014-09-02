@@ -1,183 +1,159 @@
-FVP + ATF + UBOOT + Linux setup
-Tools：
->FVP : Foundation_v8p. It can be downloaded from ARM website: 
-http://www.arm.com/zh/products/tools/models/fast-models/foundation-model.php
+#Tools   
+1. FVP : Foundation_v8p. The simulator used to test.  
+It can be downloaded from [ARM][] .
+[ARM]: http://www.arm.com/zh/products/tools/models/fast-models/foundation-model.php      "ARM"
 
->Linux server
-Working environment, my environment is ubuntu 12.04.04
+2. Linux server  
+Host working environment, my environment is ubuntu 12.04.04
 
->Cross compiler:
- gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz
-wget http://releases.linaro.org/13.11/components/toolchain/binaries/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz
-tar -xf gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz
+3. Cross compiler: gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz  
 
-Prepare Software
->RAM-disk initrd: 
-Can be download from linaro
-wget http://releases.linaro.org/14.04/openembedded/aarch64/linaro-image-lamp-genericarmv8-20140417-667.rootfs.tar.gz
-Details can be found on User Guide’s section <prepare RAM-disk>
+#Prepare Software  
+1. RAM-disk initrd
+Test version can be getted from linaro, Details can be found on ARM-Trusted-Firmware's user guide.
 
->Linux kernel.
-Details can be found on User Guide’s section <Obtaining a linux kernel>
-The software has been verified using a Linux kernel based on version 3.15-rc6
+2. Linux kernel
 
->Arm Trusted Firmware:
-Supposed that reader has knowledge with ARM Trust firmware, or else please refer to link:
-https://github.com/ARM-software/arm-trusted-firmware/blob/master/docs/user-guide.md.
+3. Arm Trusted Firmware
 
->Uboot: Universal boot loader
-The latest version of Uboot can be downloaded from site: http://git.denx.de/cgi-bin/gitweb.cgi?p=u-boot.git;a=summary
+4. Uboot: Universal boot loader
+The latest version of Uboot can be downloaded from [UBoot][], or    
+git clone git://git.denx.de/u-boot.git
 
-Architecture and Boot sequence on FVP
-1)BL1/BL2/BL3: ATF’s component
-2)BL2 & BL3 & Uboot should be package together as fip.bin
-3)BL1 is a separate bin file : bl1.bin
-4)In order to be booted by Uboot, Linux image should be added some header information use mkimage tools, 
-  and an uImage file is the object that be booted.
-5)All files include bl1.bin\fip.bin\uImage\ramdisk\device_tree dtb should be loaded with FVP command lines. 
-  For more information, see section<boot system>
-6)The boot sequence of the system is : Reset->BL1 -> BL2-> BL3 ->uBoot -> Linux
+[uboot]: http://git.denx.de/cgi-bin/gitweb.cgi?p=u-boot.git;a=summary  "UBoot"
 
-Boot system
-1)Build Uboot
->We need to run system on FVP, Our target board is vexpress_aemv8a
->On boot stage3, the default address that BL3 jump to is 0x88000000, 
-so macro CONFIG_SYS_TEXT_BASE which locate in file <vexpress_aemv8a.h> should be modified.
+#Boot system   
 
-Compile Uboot as bellow:
-$cd uboot
-$make vexpress_aemv8a_config
-$make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean
-$ make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
+1. Build Uboot  
+We need to run system on FVP, Our target board is vexpress_aemv8a.
+Compile Uboot as bellow:  
+    $cd uboot  
+    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean
+    $make vexpress_aemv8a_semi_defconfig  
+    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
-2)Make uImage
->Supposed that linux image has created
-$cd  <linux_kernel_path>/arch/arm64/boot
-$/<uboot_path>/tools/mkimage -A arm64 -O linux -T kernel -C none -a 0x80080000 -e 0x80080000  -n 'linux-3.10' -d Image uImage 
+2. Make uImage  
+Supposed that linux image has created  
+    $cd  <linux_kernel_path>/arch/arm64/boot   
+    $/<uboot_path>/tools/mkimage -A arm64 -O linux -T kernel -C none -a 0x80080000 -e 0x80080000  -n 'linux-3.15' -d Image uImage   
 Both load address and link address are 0x80080000.
 
-3)Make firmware Package 
->Firmware package: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
->Set variable BL33 as <path>/uboot.bin
-$cd <firmware_path>
-$make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_bl33>/uboot.bin all
+3. Make firmware Package   
+Firmware package: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
+    Set variable BL33 as <path_to_uboot_directory>/uboot.bin  
+    $cd <firmware_path>  
+    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_to_uboot_directory>/uboot.bin all
 
-4)	Running system
-Enter image directory
-$cd <path_to_images>
-Starting FVP
-$/<path_to_fvp>/Foundation_v8       \
- --cores=4                 \
---no-secure-memory        \
---visualization             \
---gicv3                   \
---data=bl1.bin@0x0        \
---data=fip.bin@0x8000000  \
---data=uImage@0x9000000 \
---data=ramdisk_file@0xa1000000 \
---data=fdt.dtb@0xa0000000
+4. Running system   
++ Copy all of the images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory, and then enter the directory  
++ Starting FVP as bellow:  
+$/<path_to_fvp>/Foundation_v8       \  
+ --cores=4                 \  
+--no-secure-memory        \  
+--visualization             \  
+--gicv3                   \  
+--data=bl1.bin@0x0        \  
+--data=fip.bin@0x8000000  \  
+--data=uImage@0x9000000 \  
+--data=ramdisk_file@0xa1000000 \  
+--data=fdt.dtb@0xa0000000   
 PS: --data command can be used to load image into FVP’s memory
 Boot kernel. Once firmware successfully started, System will stop at uboot’s shell environment. 
-We can use UBOOT’s bootm command to start linux kernel as bellow:
-$bootm 0x90000000 0xa1000000:size 0xa0000000
-0x90000000 is kernel’s address, 0xa0000000 is device tree dtb’s address, and 0xa1000000 is ramdisk’s address, 
-we also need to fill in ramdisk’s size.
++ We can use UBOOT’s bootm command to start linux kernel as below:
+$bootm 0x90000000 0xa1000000:size 0xa0000000.  
+0x90000000 is kernel’s address, 0xa0000000 is device tree dtb’s address, and 0xa1000000 is ramdisk’s address, we also need to fill in ramdisk size.
 
-5)Verified U-boot
-Since I verified it on Foundation platform, So I choice vexpress_aemv8a as the target board for U-Boot.
-Edit vexpress_aemv8a.h file, add macros as bellow
-CONFIG_OF_CONTROL
-CONFIG_RSA
-CONFIG_FIT_SIGNATURE
-CONFIG_FIT
-CONFIG_OF_SEPARATE
-Generate RSA Key pairs with openssl tools
-Verified boot is based on new U-boot image format FIT, so we need to create a device tree file that 
-have describe the information about images, including kernel image, FDT blob and RAMDISK. 
-FIT file as bellow
-/ {
-description = "Verified boot";
-#address-cells = <1>;
-images {
-           kernel@1 {
-         description = “kernel image”;
-                    data = /incbin/("Image");
-                    type = "kernel_noload";
-                    arch = "arm64";
-                    os = "linux";
-                    compression = "none";
-                    load = <0x80080000>;
-                    entry = <0x80080000>;
-                    kernel-version = <1>;
-                    signature@1 {
-                             algo = "sha1,rsa2048";
-                             key-name-hint = "dev";
-                    };
-           };
-           fdt@1 {
-                    description = "fdb blob";
-                    data = /incbin/("atf_psci.dtb");
-                    type = "flat_dt";
-                    arch = "arm64";
-                    compression = "none";
-                    fdt-version = <1>;
-                    signature@1 {
-                             algo = "sha1,rsa2048";
-                             key-name-hint = "dev";
-                    };
-           };
-     ramsidk@1 {
-         description=”ramdisk”;
-         data = /incbin/(“filesystem.cpio.gz”);
-         type = “ramdisk”;
-                    arch = "arm64";
-                    os = "linux";
-                    compression = "gzip";
-                    load = <0xaa000000>;
-                    entry = <0xaa000000>;
-                    signature@1 {
-                             algo = "sha1,rsa2048";
-                             key-name-hint = "dev";
-                    };
-     };
-};
-configurations {
-           default = "conf@1";
-           conf@1 {
-                    kernel = "kernel@1";
-                    fdt = "fdt@1";
-         ramdisk = “ramdisk@1”;
-           };
-};
-};
-Pay attention to section key-name-hint, This point to the path of key generated before.
-Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared
-Build FIT image as bellow
-$ cp fvp-psci-gicv2.dtb atf_psci_public.dtb
-$ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
+5. Verified U-boot  
++ Since I verified it on Foundation platform, So I choice vexpress_aemv8a as the target board for U-Boot.
+Edit vexpress_aemv8a.h file, add macros as below:   
+CONFIG_OF_CONTROL  
+CONFIG_RSA  
+CONFIG_FIT_SIGNATURE  
+CONFIG_FIT  
+CONFIG_OF_SEPARATE    
++ Generate RSA Key pairs with openssl tools  
++ Verified boot is based on new U-boot image format FIT, so we need to create a device tree file that describes the information about images, including kernel image, FDT blob and RAMDISK.   
+FIT file as bellow  
+>/ {  
+>    description = "Verified boot";    
+>   \#address-cells = <1>;   
+>   images {  
+>           kernel@1 {  
+>                   description = “kernel image”;  
+>                   data = /incbin/("Image");  
+>                   type = "kernel_noload";  
+>                   arch = "arm64";  
+>                   os = "linux";  
+>                   compression = "none";  
+>                   load = <0x80080000>;  
+>                   entry = <0x80080000>;  
+>                   kernel-version = <1>;  
+>                   signature@1 {  
+>                            algo = "sha1,rsa2048";  
+>                            key-name-hint = "dev";  
+>                   };  
+>          };  
+>          fdt@1 {  
+>                   description = "fdb blob";  
+>                   data = /incbin/("atf_psci.dtb");  
+>                   type = "flat_dt";  
+>                   arch = "arm64";  
+>                   compression = "none";  
+>                   fdt-version = <1>;  
+>                   signature@1 {  
+>                            algo = "sha1,rsa2048";  
+>                            key-name-hint = "dev";  
+>                   };  
+>          };  
+>    ramsidk@1 {  
+>        description=”ramdisk”;  
+>        data = /incbin/(“filesystem.cpio.gz”);  
+>        type = “ramdisk”;  
+>                   arch = "arm64";  
+>                   os = "linux";  
+>                   compression = "gzip";  
+>                   load = <0xaa000000>;  
+>                   entry = <0xaa000000>;  
+>                   signature@1 {  
+>                            algo = "sha1,rsa2048";  
+>                            key-name-hint = "dev";  
+>                   };  
+>       };  
+>   };  
+>   configurations {  
+>          default = "conf@1";  
+>          conf@1 {  
+>                   kernel = "kernel@1";  
+>                   fdt = "fdt@1";  
+>                   ramdisk = “ramdisk@1”;  
+>          };  
+>   };  
+>};   
+> Pay attention to section key-name-hint, This point to the path of key > generated before. Before we build FIT image, kernel image , FDT blob > and ramdisk should be prepared.  
+> Build FIT image as below:  
+>> $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
+>> $ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
 
-Build FDT U-boot as 
-$ make distclean
-$ make vexpress_aemb8a_config
-$ make CROSS_COMPILE=<> DEVICE_TREE=<> all
-$ make CROSS_COMPILE=<> EXT_DTB=<dtb file>
-EXT_DTB is the dtb file that we signed before in last step. After this step was completed, 
-public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
-U-boot-dtb.bin is the file that we need.
-Build ATF, and BL33 is point to u-boot-dtb.bin
-Run the FIT image as bellow;
-$/<path_to_fvp>/Foundation_v8       \
- --cores=4                 \
---no-secure-memory        \
---visualization             \
---gicv3                   \
---data=bl1.bin@0x0        \
---data=fip.bin@0x8000000  \
- --data=image.fit@0xB0000004
-Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found sometimes may 
-encounter the problem. I avoid this problem by modify the address that FIT image be loaded. IE, 
-I loaded image.fit to 0xB0000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
++ Build FDT U-boot  
+$ make distclean  
+$ make vexpress_aemb8a_config  
+$ make CROSS_COMPILE=<> DEVICE_TREE=<> all  
+$ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
+EXT_DTB is the dtb file that we signed before in last step. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
+U-boot-dtb.bin is the file that we need.  
+Then Build ATF, and BL33 is point to u-boot-dtb.bin
+
++ Run the FIT image as bellow  
+$/<path_to_fvp>/Foundation_v8       \  
+--cores=4                 \  
+--no-secure-memory        \  
+--visualization             \  
+--gicv3                   \  
+--data=bl1.bin@0x0        \  
+--data=fip.bin@0x8000000  \  
+--data=image.fit@0xB0000004  
+Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
+IE, I loaded image.fit to 0xB0000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
 This problem is mainly related to mkimage tools and FIT format image’s parse. 
 
-After load and verified, Use bootm command to boot kernel as :
-$bootm 0xB0000004
++ After loaded images are verified, Use bootm command to boot kernel as : $bootm 0xB0000004
