@@ -28,7 +28,8 @@ git clone git://git.denx.de/u-boot.git
 We need to run system on FVP, Our target board is vexpress_aemv8a.
 Compile Uboot as bellow:  
     $cd uboot  
-    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean
+    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean  
+    
     $make vexpress_aemv8a_semi_defconfig  
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
@@ -137,7 +138,7 @@ FIT file as bellow
 　　　　　　};  
 　　};  
 };   
-Pay attention to section key-name-hint, This point to the path of key  generated before. Before we build FIT image, kernel image , FDT blob > and ramdisk should be prepared.  
+Pay attention to section key-name-hint, This point to the path of key  generated before. Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.  
 Build FIT image as below:  
  $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
  $ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
@@ -147,7 +148,7 @@ $ make distclean
 $ make vexpress_aemb8a_config  
 $ make CROSS_COMPILE=<> DEVICE_TREE=<> all  
 $ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
-EXT_DTB is the dtb file that we signed before in last step. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
+EXT_DTB is the dtb file that we signed before in make FIT image step. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
 U-boot-dtb.bin is the file that we need.  
 Then Build ATF, and BL33 is point to u-boot-dtb.bin
 
