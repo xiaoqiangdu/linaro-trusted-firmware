@@ -30,7 +30,7 @@ Compile Uboot as bellow:
     $cd uboot  
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean  
     
-    $make vexpress_aemv8a_semi_defconfig  
+    $make vexpress_aemv8a_semi_config    
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
 ###2)Make uImage  
