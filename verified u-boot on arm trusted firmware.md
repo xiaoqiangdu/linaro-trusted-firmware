@@ -27,8 +27,9 @@ git clone git://git.denx.de/u-boot.git
 ###1)Build Uboot  
 We need to run system on Foundation, So my target board is vexpress_aemv8a.   
 vexpress_aemv8a_semi_config can be selected when you run on FVP platform.  
-Modify macro CONFIG_SYS_TEXT_BASE which locate in include/configs/vexpress_aemv8a.h file, for BL31 will jump  
-to address 0x88000000, CONFIG_SYS_TEXT_BASE should be modified to this value.
+Modify macro CONFIG_SYS_TEXT_BASE which locate in include/configs/vexpress_aemv8a.h file,   
+for BL31 will jump to address 0x88000000, CONFIG_SYS_TEXT_BASE should be modified to this value.  
+
 Compile Uboot as bellow:  
     $cd uboot  
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean  
@@ -49,7 +50,7 @@ Firmware package includes: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_to_uboot_directory>/uboot.bin all fip.bin
 
 ###4)Running system   
-+ Copy all of these images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory, and then enter the directory  
++ Copy all of these images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory,then enter the directory  
 + Starting Foundation as bellow:  
 $/<path_to_fvp>/Foundation_v8       \  
  --cores=4                 \  
@@ -63,9 +64,10 @@ $/<path_to_fvp>/Foundation_v8       \
 --data=fdt.dtb@0xa0000000   
 PS: --data command can be used to load image into FVP’s memory
 Boot kernel. Once firmware successfully started, System will stop at uboot’s shell environment. 
-+ We can use UBOOT’s bootm command to start linux kernel as below:
-$bootm 0x90000000 0xa1000000:size 0xa0000000.  
-0x90000000 is kernel’s address, 0xa0000000 is device tree dtb’s address, and 0xa1000000 is ramdisk’s address, we also need to fill in ramdisk size.
++ We can use UBOOT’s bootm command to start linux kernel as below:  
+    $bootm 0x90000000 0xa1000000:size 0xa0000000.  
+0x90000000 is kernel’s address, 0xa0000000 is device tree dtb’s address,   
+and 0xa1000000 is ramdisk’s address, we also need to fill in ramdisk size.  
 
 ###5. Verified U-boot  
 + Since I verified it on Foundation platform, So I choice vexpress_aemv8a as the target board for U-Boot.
@@ -76,7 +78,7 @@ CONFIG_FIT_SIGNATURE
 CONFIG_FIT  
 CONFIG_OF_SEPARATE    
 There may exit some compile problem for lack of gpio.h file, this is caused by Uboot's dependency design.  
-We need to add a empty gpio.h file to path arch\arm\include\asm\arch-armv8 just like other boards. 
+We need to add a empty gpio.h file to path arch\arm\include\asm\arch-armv8 just like other boards.  
 + Generate RSA Key pairs with openssl tools  
  key_dir="/work/keys/"  
  key_name="dev"  
@@ -143,7 +145,9 @@ FIT file as bellow
 　　　　　　};  
 　　};  
 };   
-Pay attention to section key-name-hint, This point to the path of key  generated before. Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.Configure information depends on your own board.  
+Pay attention to section key-name-hint, This point to the path of key  generated before.  
+Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.  
+Details configure information depends on your own board.  
 Build FIT image and signed the dtb file for Uboot as below:  
  $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
  $ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
@@ -153,7 +157,11 @@ $ make distclean
 $ make vexpress_aemb8a_config  
 $ make CROSS_COMPILE=<> DEVICE_TREE=foundation all  
 $ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
-Note that, I copied device tree file foundation.dts to Uboot's arch/arm/dts file, and made corresponding modifications to the Makefile. This is the object what DEVICE_TREE point to. EXT_DTB is the dtb file that we signed before in make FIT image step: atf_psci_public.dtb. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
+Note that, I copied device tree file foundation.dts to Uboot's arch/arm/dts file,   
+and made corresponding modifications to the Makefile.This is the object what DEVICE_TREE point to.    
+EXT_DTB is the dtb file that we signed before in make FIT image step: atf_psci_public.dtb.   
+After this step was completed, public key was held on device tree.  
+U-Boot can use this to verify the image that signed with private key.
 U-boot-dtb.bin is the file that we need.  
 Then Build ATF, and BL33 is point to u-boot-dtb.bin
 
@@ -166,7 +174,8 @@ $/<path_to_fvp>/Foundation_v8       \
 --data=bl1.bin@0x0        \  
 --data=fip.bin@0x8000000  \  
 --data=image.fit@0xB0000004  
-Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
+Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found  
+sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
 IE, I loaded image.fit to 0xB0000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
 This problem is mainly related to mkimage tools and FIT format image’s parse. 
 
