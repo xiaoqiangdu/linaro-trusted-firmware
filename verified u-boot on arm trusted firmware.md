@@ -25,12 +25,15 @@ git clone git://git.denx.de/u-boot.git
 #Boot system   
 
 ###1)Build Uboot  
-We need to run system on FVP, Our target board is vexpress_aemv8a.
+We need to run system on Foundation, So my target board is vexpress_aemv8a.   
+vexpress_aemv8a_semi_config can be selected when you run on FVP platform.  
+Modify macro CONFIG_SYS_TEXT_BASE which locate in include/configs/vexpress_aemv8a.h file, for BL31 will jump  
+to address 0x88000000, CONFIG_SYS_TEXT_BASE should be modified to this value.
 Compile Uboot as bellow:  
     $cd uboot  
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean  
     
-    $make vexpress_aemv8a_semi_config    
+    $make vexpress_aemv8a_config    
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
 ###2)Make uImage  
@@ -40,14 +43,14 @@ Supposed that linux image has created
 Both load address and link address are 0x80080000.
 
 ###3)Make firmware Package   
-Firmware package: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
+Firmware package includes: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
     Set variable BL33 as <path_to_uboot_directory>/uboot.bin  
     $cd <firmware_path>  
-    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_to_uboot_directory>/uboot.bin all
+    $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_to_uboot_directory>/uboot.bin all fip.bin
 
 ###4)Running system   
-+ Copy all of the images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory, and then enter the directory  
-+ Starting FVP as bellow:  
++ Copy all of these images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory, and then enter the directory  
++ Starting Foundation as bellow:  
 $/<path_to_fvp>/Foundation_v8       \  
  --cores=4                 \  
 --no-secure-memory        \  
@@ -55,7 +58,7 @@ $/<path_to_fvp>/Foundation_v8       \
 --gicv3                   \  
 --data=bl1.bin@0x0        \  
 --data=fip.bin@0x8000000  \  
---data=uImage@0x9000000 \  
+--data=uImage@0x90000000 \  
 --data=ramdisk_file@0xa1000000 \  
 --data=fdt.dtb@0xa0000000   
 PS: --data command can be used to load image into FVP’s memory
@@ -72,6 +75,8 @@ CONFIG_RSA
 CONFIG_FIT_SIGNATURE  
 CONFIG_FIT  
 CONFIG_OF_SEPARATE    
+There may exit some compile problem for lack of gpio.h file, this is caused by Uboot's dependency design.  
+We need to add a empty gpio.h file to path arch\arm\include\asm\arch-armv8 just like other boards. 
 + Generate RSA Key pairs with openssl tools  
  key_dir="/work/keys/"  
  key_name="dev"  
@@ -138,17 +143,17 @@ FIT file as bellow
 　　　　　　};  
 　　};  
 };   
-Pay attention to section key-name-hint, This point to the path of key  generated before. Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.  
-Build FIT image as below:  
+Pay attention to section key-name-hint, This point to the path of key  generated before. Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.Configure information depends on your own board.  
+Build FIT image and signed the dtb file for Uboot as below:  
  $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
  $ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
 
 + Build FDT U-boot  
 $ make distclean  
 $ make vexpress_aemb8a_config  
-$ make CROSS_COMPILE=<> DEVICE_TREE=<> all  
+$ make CROSS_COMPILE=<> DEVICE_TREE=foundation all  
 $ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
-EXT_DTB is the dtb file that we signed before in make FIT image step. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
+Note that, I copied device tree file foundation.dts to Uboot's arch/arm/dts file, and made corresponding modifications to the Makefile. This is the object what DEVICE_TREE point to. EXT_DTB is the dtb file that we signed before in make FIT image step: atf_psci_public.dtb. After this step was completed, public key was held on device tree, U-Boot can use this to verify the image that signed with private key.
 U-boot-dtb.bin is the file that we need.  
 Then Build ATF, and BL33 is point to u-boot-dtb.bin
 
