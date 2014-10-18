@@ -173,7 +173,7 @@ and entry address for each sub image. Build FIT image and signed the dtb file fo
 I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be signed with public key.  
 
 
-+ Build FDT U-boot  
++ Build FDT U-boot   
 
     $ make distclean  
     $ make vexpress_aemb8a_config  
@@ -189,20 +189,24 @@ U-boot-dtb.bin is the file that we need.
 Then Build ATF, and BL33 is point to u-boot-dtb.bin
 
 + Run the FIT image as bellow  
+
 $/<path_to_fvp>/Foundation_v8       \  
- --cores=4                 \  
+--cores=4                 \  
 --no-secure-memory        \  
 --visualization             \  
 --gicv3                   \  
 --data=bl1.bin@0x0        \  
 --data=fip.bin@0x8000000  \  
 --data=image.fit@0xa2000004  
+
 Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found  
 sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
 IE, I loaded image.fit to 0xa2000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
 This problem is mainly related to mkimage tools and FIT format image’s parse. 
 
-+ After loaded images are verified, Use bootm command to boot kernel as : $bootm 0xB0000004  
+After loaded images are verified, Use bootm command to boot kernel as :  
+
+    $bootm 0xB0000004  
 
 PS: There exist some problems in he latest version of Uboot(v2014.10),  
 You may need to roll back gic_v64.S file as the older version when you open CONFIG_GICV2 macro.  
