@@ -74,25 +74,35 @@ and 0xa1000000 is ramdisk’s address, we also need to fill in ramdisk size.
 ###5. Verified U-boot  
 + Since I verified it on Foundation platform, So I choice vexpress_aemv8a as the target board for U-Boot.
 Edit vexpress_aemv8a.h file, add macros as below:   
-CONFIG_OF_CONTROL  
-CONFIG_RSA  
-CONFIG_FIT_SIGNATURE  
-CONFIG_FIT  
-CONFIG_OF_SEPARATE    
+
+    CONFIG_OF_CONTROL  
+    CONFIG_RSA  
+    CONFIG_FIT_SIGNATURE  
+    CONFIG_FIT  
+    CONFIG_OF_SEPARATE    
+
 There may exit some compile problem for lack of gpio.h file, this is caused by Uboot's dependency design.  
 We need to add a empty gpio.h file to the path arch\arm\include\asm\arch-armv8, just like other boards.  
 
 + Generate RSA Key pairs with openssl tools  
- key_dir="/work/keys/"  
- key_name="dev"  
-Generate the private signing key as:  
-$ openssl genrsa -F4 -out "${key_dir}"/"${key_name}".key 2048  
-Generate the certificate containing public key as:  
-$ openssl req -batch -new -x509 -key "${key_dir}"/"${key_name}".key \
-        -out "${key_dir}"/"${key_name}".crt  
 
-+ Verified boot is based on new U-boot image format FIT, so we need to create a device tree file that describes the information about images, including kernel image, FDT blob and RAMDISK.   
-FIT file as bellow  
+    key_dir="/work/keys/"  
+    key_name="dev"  
+
+Generate the private signing key as:  
+
+    $ openssl genrsa -F4 -out "${key_dir}"/"${key_name}".key 2048  
+
+Generate the certificate containing public key as:   
+
+    $ openssl req -batch -new -x509 -key "${key_dir}"/"${key_name}".key \
+            -out "${key_dir}"/"${key_name}".crt  
+
++ Edit FIT descripte file.   
+Verified boot is based on new U-boot image format FIT, so we need to create a device tree file  
+that describes the information about images, including kernel image, FDT blob and RAMDISK.   
+FIT file sample as bellow   
+  
 / {  
 　　description = "Verified boot";    
 　　\#address-cells = <1>;   
@@ -152,16 +162,20 @@ Pay attention to section key-name-hint, This point to the path of key  generated
 Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.  
 Details configure information depends on your own board, you need to select load address   
 and entry address for each sub image. Build FIT image and signed the dtb file for Uboot as below:  
- $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
- $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fir  
+
+    $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
+    $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fir  
+
 I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be signed with public key.  
 
 
 + Build FDT U-boot  
-$ make distclean  
-$ make vexpress_aemb8a_config  
-$ make CROSS_COMPILE=<> DEVICE_TREE=foundation all  
-$ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
+
+    $ make distclean  
+    $ make vexpress_aemb8a_config  
+    $ make CROSS_COMPILE=<> DEVICE_TREE=foundation all  
+    $ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
+
 Note that, I copied device tree file foundation.dts to Uboot's arch/arm/dts file,   
 and made corresponding modifications to the Makefile.This is the object what DEVICE_TREE point to.    
 EXT_DTB is the dtb file that we signed before in make FIT image step: atf_psci_public.dtb.   
