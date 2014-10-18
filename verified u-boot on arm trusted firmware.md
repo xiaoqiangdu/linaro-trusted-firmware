@@ -40,9 +40,11 @@ Compile Uboot as bellow:
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
 ###2)Make uImage  
-Supposed that linux image has created  
+Supposed that linux image has created   
+
     $cd  <linux_kernel_path>/arch/arm64/boot   
-    $/<uboot_path>/tools/mkimage -A arm64 -O linux -T kernel -C none -a 0x80080000 -e 0x80080000  -n 'linux-3.15' -d Image uImage   
+    $/<uboot_path>/tools/mkimage -A arm64 -O linux -T kernel -C none -a 0x80080000 -e 0x80080000  -n 'linux-3.15' -d           Image uImage   
+    
 Both load address and link address are 0x80080000.
 
 ###3)Make firmware Package   
@@ -67,7 +69,9 @@ $/<path_to_fvp>/Foundation_v8       \
 PS: --data command can be used to load image into FVP’s memory
 Boot kernel. Once firmware successfully started, System will stop at uboot’s shell environment. 
 + We can use UBOOT’s bootm command to start linux kernel as below:  
+
     $bootm 0x90000000 0xa1000000:size 0xa0000000.  
+
 0x90000000 is kernel’s address, 0xa0000000 is device tree dtb’s address,   
 and 0xa1000000 is ramdisk’s address, we also need to fill in ramdisk size.  
 
@@ -96,7 +100,7 @@ Generate the private signing key as:
 Generate the certificate containing public key as:   
 
     $ openssl req -batch -new -x509 -key "${key_dir}"/"${key_name}".key \
-            -out "${key_dir}"/"${key_name}".crt  
+       -out "${key_dir}"/"${key_name}".crt  
 
 + Edit FIT descripte file.   
 Verified boot is based on new U-boot image format FIT, so we need to create a device tree file  
@@ -164,7 +168,7 @@ Details configure information depends on your own board, you need to select load
 and entry address for each sub image. Build FIT image and signed the dtb file for Uboot as below:  
 
     $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
-    $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fir  
+    $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fit  
 
 I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be signed with public key.  
 
