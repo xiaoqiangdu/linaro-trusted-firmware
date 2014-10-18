@@ -35,6 +35,8 @@ Compile Uboot as bellow:
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- distclean  
     
     $make vexpress_aemv8a_config    
+    The latest version you should use vexpress_aemv8a_defconfig   
+
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- all
 
 ###2)Make uImage  
@@ -50,7 +52,7 @@ Firmware package includes: bl1.bin/ bl2.bin/ bl31.bin/ bl33.bin(uboot.bin)
     $make CROSS_COMPILE=<path>/bin/aarch64-none-elf- PLAT=fvp BL33=<path_to_uboot_directory>/uboot.bin all fip.bin
 
 ###4)Running system   
-+ Copy all of these images including bl1.bin, fip.bin, uImage, ramdisk, and fdt blog to the same directory,then enter the directory  
++ Copy all of these images including bl1.bin/fip.bin/uImage/ramdisk/fdt blob to work directory,then enter.   
 + Starting Foundation as bellow:  
 $/<path_to_fvp>/Foundation_v8       \  
  --cores=4                 \  
@@ -78,7 +80,8 @@ CONFIG_FIT_SIGNATURE
 CONFIG_FIT  
 CONFIG_OF_SEPARATE    
 There may exit some compile problem for lack of gpio.h file, this is caused by Uboot's dependency design.  
-We need to add a empty gpio.h file to path arch\arm\include\asm\arch-armv8 just like other boards.  
+We need to add a empty gpio.h file to the path arch\arm\include\asm\arch-armv8, just like other boards.  
+
 + Generate RSA Key pairs with openssl tools  
  key_dir="/work/keys/"  
  key_name="dev"  
@@ -147,10 +150,12 @@ FIT file as bellow
 };   
 Pay attention to section key-name-hint, This point to the path of key  generated before.  
 Before we build FIT image, kernel image , FDT blob and ramdisk should be prepared.  
-Details configure information depends on your own board.  
-Build FIT image and signed the dtb file for Uboot as below:  
+Details configure information depends on your own board, you need to select load address   
+and entry address for each sub image. Build FIT image and signed the dtb file for Uboot as below:  
  $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
- $ mkimage –D "-I dts -O dtb -p 2000" -F –f kernel.its -k "key" –K atf_psci_public.dtb -r image.fit
+ $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fir  
+I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be signed with public key.  
+
 
 + Build FDT U-boot  
 $ make distclean  
@@ -173,10 +178,16 @@ $/<path_to_fvp>/Foundation_v8       \
 --gicv3                   \  
 --data=bl1.bin@0x0        \  
 --data=fip.bin@0x8000000  \  
---data=image.fit@0xB0000004  
+--data=image.fit@0xa2000004  
 Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found  
 sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
-IE, I loaded image.fit to 0xB0000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
+IE, I loaded image.fit to 0xa2000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
 This problem is mainly related to mkimage tools and FIT format image’s parse. 
 
-+ After loaded images are verified, Use bootm command to boot kernel as : $bootm 0xB0000004
++ After loaded images are verified, Use bootm command to boot kernel as : $bootm 0xB0000004  
+
+PS: There exist some problems in he latest version of Uboot(v2014.10),  
+You may need to roll back gic_v64.S file as the older version when you open CONFIG_GICV2 macro.  
+Although I have feedbacked the problem to Uboot's maintainer, still I recommend you   
+to use the older version of Uboot if you want to verified on Foundation platform currently.  
+Or you can substitude gic_v64.S file with the older version and add CONFIG_GICV2 macro in vexpress_aemv8a.h.
