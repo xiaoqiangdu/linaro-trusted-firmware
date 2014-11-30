@@ -101,11 +101,28 @@ Generate the certificate containing public key as:
 
     $ openssl req -batch -new -x509 -key "${key_dir}"/"${key_name}".key \
        -out "${key_dir}"/"${key_name}".crt  
++ Build control device tree for U-Boot used to contain public key information  
+For Uboot need to verify images with public key, so there must be a place used to store public information.  
+Here we setup a simple device tree that used to store public key, sample Uboot device tree <u-boot.dts> as:
+
+    /dts-v1/;  
+    
+    / {  
+            model = "Keys";  
+            compatible = "linaroSwg FVP";  
+            signature {  
+                key-dev {  
+                        required = "conf";  
+                        algo = "sha1,rsa2048";  
+                        key-name-hint = "my_key";  
+                };  
+        };  
+    }
 
 + Edit FIT descripte file.   
 Verified boot is based on new U-boot image format FIT, so we need to create a device tree file  
 that describes the information about images, including kernel image, FDT blob and RAMDISK.   
-FIT file sample as bellow   
+FIT file <kernel.its> sample as bellow   
   
 / {  
 　　description = "Verified boot";    
@@ -118,8 +135,8 @@ FIT file sample as bellow
 　　　　　　　　arch = "arm64";  
 　　　　　　　　os = "linux";  
 　　　　　　　　compression = "none";  
-　　　　　　　　load = <0x80080000>;  
-　　　　　　　　entry = <0x80080000>;  
+　　　　　　　　load = < 0x80080000 >;  
+　　　　　　　　entry = < 0x80080000 >;  
 　　　　　　　　kernel-version = <1>;  
 　　　　　　　　signature@1 {  
 　　　　　　　　　　algo = "sha1,rsa2048";  
@@ -145,8 +162,8 @@ FIT file sample as bellow
 　　　　　　　　arch = "arm64";  
 　　　　　　　　os = "linux";  
 　　　　　　　　compression = "gzip";  
-　　　　　　　　load = <0xaa000000>;  
-　　　　　　　　entry = <0xaa000000>;  
+　　　　　　　　load = < 0xaa000000 >;  
+　　　　　　　　entry = < 0xaa000000 >;  
 　　　　　　　　signature@1 {  
 　　　　　　　　　　algo = "sha1,rsa2048";  
 　　　　　　　　　　key-name-hint = "dev";  
@@ -167,10 +184,13 @@ Before we build FIT image, kernel image , FDT blob and ramdisk should be prepare
 Details configure information depends on your own board, you need to select load address   
 and entry address for each sub image. Build FIT image and signed the dtb file for Uboot as below:  
 
-    $ cp fvp-psci-gicv2.dtb atf_psci_public.dtb  
-    $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its -k <path_to_key> -K atf_psci_public.dtb -r image.fit  
+    $ dtc -p 0x1000 u-boot.dts -O dtb -o u-boot.dtb  
+    $ mkimage -D "-I dts -O dtb -p 2000" -f kernel.its image.fit
+    $ mkimage -D "-I dts -O dtb -p 2000" -F -k <path_to_key> -K u-boot.dtb -r image.fit  
 
-I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be signed with public key.  
+Both images are signed with private key and public key has been stored in u-boot.dtb file.  
+After the last command line, we can verify that there are new nodes added to u-boot.dtb file, as:  
+    $ dtc -I dtb -O dts u-boot.dtb
 
 
 + Build FDT U-boot   
@@ -181,10 +201,11 @@ I selected fvp-psci-gicv2.dtb that located in firmware's dts directory to be sig
     $ make CROSS_COMPILE=<> EXT_DTB=<dtb file>  
 
 Note that, I copied device tree file foundation.dts to Uboot's arch/arm/dts file,   
-and made corresponding modifications to the Makefile.This is the object what DEVICE_TREE point to.    
-EXT_DTB is the dtb file that we signed before in make FIT image step: atf_psci_public.dtb.   
-After this step was completed, public key was held on device tree.  
-U-Boot can use this to verify the image that signed with private key.
+and made corresponding modifications to the Makefile. Or there will be compile error occurs.  
+This is the object what DEVICE_TREE point to.  
+
+EXT_DTB is the dtb file that we signed with public key before in make FIT image step: u-boot.dtb.   
+U-Boot can use this to verify the image that signed with private key.  
 U-boot-dtb.bin is the file that we need.  
 Then Build ATF, and BL33 is point to u-boot-dtb.bin
 
@@ -201,12 +222,12 @@ $/<path_to_fvp>/Foundation_v8       \
 
 Note: There exist an alignment problem in U-boot’s mkimage, I traced the code and found  
 sometimes may encounter the problem. I avoid this problem by modify the address that FIT image be loaded.   
-IE, I loaded image.fit to 0xa2000004 and it is OK, when I load it to 0xB0000000 there would be a abortion exception. 
+IE, I loaded image.fit to 0xa2000004 and it is OK, when I load it to 0xa0000000 there would be a abortion exception. 
 This problem is mainly related to mkimage tools and FIT format image’s parse. 
 
 After loaded images are verified, Use bootm command to boot kernel as :  
 
-    $bootm 0xB0000004  
+    $bootm 0xa0000004  
 
 PS: There exist some problems in he latest version of Uboot(v2014.10),  
 You may need to roll back gic_v64.S file as the older version when you open CONFIG_GICV2 macro.  
