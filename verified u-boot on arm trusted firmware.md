@@ -117,7 +117,7 @@ Here we setup a simple device tree that used to store public key, sample Uboot d
                         key-name-hint = "my_key";  
                 };  
         };  
-    }
+    };
 
 + Edit FIT descripte file.   
 Verified boot is based on new U-boot image format FIT, so we need to create a device tree file  
