@@ -106,7 +106,7 @@ For Uboot need to verify images with public key, so there must be a place used t
 Here we setup a simple device tree that used to store public key, sample Uboot device tree <u-boot.dts> as:
 
     /dts-v1/;  
-    
+
     / {  
             model = "Keys";  
             compatible = "linaroSwg FVP";  
@@ -115,8 +115,8 @@ Here we setup a simple device tree that used to store public key, sample Uboot d
                         required = "conf";  
                         algo = "sha1,rsa2048";  
                         key-name-hint = "my_key";  
-                };  
-        };  
+                    };  
+            };  
     };
 
 + Edit FIT descripte file.   
